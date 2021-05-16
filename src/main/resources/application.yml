@@ -1,0 +1,30 @@
+spring:
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    timeout: 3000
+    password:
+    lettuce:
+      pool:
+        max-wait: 16
+        max-active: 16
+        max-idle: 16
+        min-idle: 1
+      shutdown-timeout: 10000ms  # 关闭超时时间
+    database: 0
+
+application:
+  #程序运行模式 single-单机 cluster-redis-集群redis模式
+  run-model: single
+
+#websocket配置
+ws:
+  hostname: 0.0.0.0
+  port: 8081
+  #socketio推流协议配置
+  socketio:
+    context: /ws
+    bossThreads: 2
+    workerThreads: 10
+    hostname: ${ws.hostname}
+    port: ${ws.port}
