@@ -3,16 +3,16 @@ package com.example.messagecenter.transport.websocket.socketio;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.annotation.SpringAnnotationScanner;
 import com.example.messagecenter.common.event.MessagePushEvent;
-import com.example.messagecenter.common.util.SpringUtil;
 import com.example.messagecenter.common.vo.MessageVo;
 import com.example.messagecenter.config.WebSocketConfig;
 import com.example.messagecenter.transport.MessageTransportService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.ContextClosedEvent;
 
 /**
  * @author lixiangqian
@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 @Configuration
 @ConditionalOnClass(SocketIOServer.class)
-public class NettySocketIoConfig implements CommandLineRunner {
+public class NettySocketIoConfig {
     /**
      * netty-socketio服务器
      */
@@ -51,11 +51,21 @@ public class NettySocketIoConfig implements CommandLineRunner {
         };
     }
 
-    @Override
-    public void run(String... args) {
-        log.debug("SocketIOServer start...");
-        com.corundumstudio.socketio.Configuration socketio = SpringUtil.getBean(WebSocketConfig.class).getSocketio();
-        SpringUtil.getBean(SocketIOServer.class).start();
-        log.debug("SocketIOServer started: bindIp={}, port={}", socketio.getHostname(), socketio.getPort());
+    @Bean
+    ApplicationListener<ApplicationReadyEvent> startSocketIOServerListener(SocketIOServer socketIOServer, WebSocketConfig webSocketConfig) {
+        return contextReadyEvent -> {
+            log.info("SocketIOServer start...");
+            socketIOServer.start();
+            com.corundumstudio.socketio.Configuration socketio = webSocketConfig.getSocketio();
+            log.info("SocketIOServer started: bindIp={}, port={}", socketio.getHostname(), socketio.getPort());
+        };
+    }
+
+    @Bean
+    ApplicationListener<ContextClosedEvent> stopSocketIOServerListener(SocketIOServer socketIOServer) {
+        return contextClosedEvent -> {
+            log.info("SocketIOServer stop...");
+            socketIOServer.stop();
+        };
     }
 }

@@ -27,4 +27,10 @@ ws:
     bossThreads: 2
     workerThreads: 10
     hostname: ${ws.hostname}
-    port: ${ws.port}
+    port: 8081
+  netty:
+    context: '/netty/ws'
+    bossThreads: 2
+    workerThreads: 16
+    host: ${ws.hostname}
+    port: 8082

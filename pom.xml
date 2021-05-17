@@ -61,6 +61,14 @@
         </dependency>
         <!-- 协议层为netty-socketio： 依赖 end-->
 
+        <!-- 协议层为netty-websocket： 依赖 start-->
+        <dependency>
+            <groupId>org.yeauty</groupId>
+            <artifactId>netty-websocket-spring-boot-starter</artifactId>
+            <version>0.11.0</version>
+        </dependency>
+        <!-- 协议层为netty-websocket： 依赖 end-->
+
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
@@ -68,12 +76,7 @@
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>5.6.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-websocket</artifactId>
-            <version>5.3.6</version>
+            <version>5.2.4</version>
         </dependency>
     </dependencies>
 
