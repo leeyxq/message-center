@@ -25,6 +25,7 @@ public class IndexController {
     public String index() {
         return "index";
     }
+
     @GetMapping("/netty")
     public String netty() {
         return "netty";

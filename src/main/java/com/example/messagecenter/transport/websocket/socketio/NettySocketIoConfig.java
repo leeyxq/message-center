@@ -27,9 +27,10 @@ public class NettySocketIoConfig {
      */
     @Bean
     public SocketIOServer socketIOServer(WebSocketConfig webSocketConfig) {
-        assert webSocketConfig != null : "socketio config not found";
-        SocketIOServer server = new SocketIOServer(webSocketConfig.getSocketio());
-        return server;
+        if (webSocketConfig == null) {
+            throw new IllegalArgumentException("Invalid param: webSocketConfig is null");
+        }
+        return new SocketIOServer(webSocketConfig.getSocketio());
     }
 
     /**
@@ -46,9 +47,7 @@ public class NettySocketIoConfig {
     @Bean
     public ApplicationListener<MessagePushEvent> socketIoMessagePushEvent() {
         final MessageTransportService messageTransportService = new MessageTransportServiceSocketIoImpl();
-        return event -> {
-            messageTransportService.pushToWebsite((MessageVo) event.getSource());
-        };
+        return event -> messageTransportService.pushToWebsite((MessageVo) event.getSource());
     }
 
     @Bean

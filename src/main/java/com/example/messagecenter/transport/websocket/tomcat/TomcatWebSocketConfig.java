@@ -37,9 +37,7 @@ public class TomcatWebSocketConfig {
      */
     @Bean
     public ApplicationListener<MessagePushEvent> tomcatMessagePushEvent(@Autowired @Qualifier("tomcatMessageTransportService") MessageTransportService messageTransportService) {
-        return event -> {
-            messageTransportService.pushToWebsite((MessageVo) event.getSource());
-        };
+        return event -> messageTransportService.pushToWebsite((MessageVo) event.getSource());
     }
 
     @Bean("tomcatMessageTransportService")

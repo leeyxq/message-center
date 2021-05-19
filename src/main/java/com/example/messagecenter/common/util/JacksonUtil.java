@@ -2,6 +2,7 @@ package com.example.messagecenter.common.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
+import lombok.experimental.UtilityClass;
 
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.Map;
  * @author lixiangqian
  * @since 2021/5/16 12:36
  */
+@UtilityClass
 public class JacksonUtil {
 
     private static ObjectMapper mapper = new ObjectMapper();

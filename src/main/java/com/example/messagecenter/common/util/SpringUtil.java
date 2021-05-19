@@ -19,18 +19,17 @@ import java.util.Map;
  * @since 2021/5/16 14:47
  */
 @Component
+@SuppressWarnings("all")
 public class SpringUtil implements ApplicationContextAware {
     private static ApplicationContext applicationContext;
 
-    public SpringUtil() {
-    }
-
-    public void setApplicationContext(ApplicationContext applicationContext) {
-        SpringUtil.applicationContext = applicationContext;
-    }
-
     public static ApplicationContext getApplicationContext() {
         return applicationContext;
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        SpringUtil.applicationContext = applicationContext;
     }
 
     public static <T> T getBean(String name) {
@@ -46,7 +45,7 @@ public class SpringUtil implements ApplicationContextAware {
     }
 
     public static <T> T getBean(TypeReference<T> reference) {
-        ParameterizedType parameterizedType = (ParameterizedType) reference.getType();
+        var parameterizedType = (ParameterizedType) reference.getType();
         Class<T> rawType = (Class) parameterizedType.getRawType();
         Class<?>[] genericTypes = (Class[]) Arrays.stream(parameterizedType.getActualTypeArguments()).map((type) -> {
             return (Class) type;

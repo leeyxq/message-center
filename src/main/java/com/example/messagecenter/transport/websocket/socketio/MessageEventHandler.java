@@ -26,7 +26,17 @@ import java.util.concurrent.ConcurrentMap;
 @ConditionalOnClass(SocketIOServer.class)
 public class MessageEventHandler {
 
-    public static ConcurrentMap<String, SocketIOClient> socketIOClientMap = new ConcurrentHashMap<>();
+    protected static final ConcurrentMap<String, SocketIOClient> socketIOClientMap = new ConcurrentHashMap<>();
+
+    public static void toUser(String name, String msg) {
+        var socketIOClient = socketIOClientMap.get(name);
+        if (socketIOClient == null || !socketIOClient.isChannelOpen()) {
+            log.debug("sentToUser error: connection lost, user={}, msg={}", name, msg);
+            socketIOClientMap.remove(name);
+            return;
+        }
+        socketIOClient.sendEvent("message", msg);
+    }
 
     /**
      * 客户端连接的时候触发
@@ -72,16 +82,5 @@ public class MessageEventHandler {
         log.info("login event：" + data);
         //回发消息
         client.sendEvent("message", data);
-    }
-
-    public static void toUser(String name, String msg) {
-        SocketIOClient socketIOClient = socketIOClientMap.get(name);
-        if (socketIOClient == null) {
-            log.debug("sentToUser error: not found user, user={}, msg={}", name, msg);
-        }
-        if (!socketIOClient.isChannelOpen()) {
-            log.debug("sentToUser error: connection lost, user={}, msg={}", name, msg);
-        }
-        socketIOClient.sendEvent("message", msg);
     }
 }

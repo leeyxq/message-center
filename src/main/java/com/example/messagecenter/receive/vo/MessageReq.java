@@ -45,7 +45,7 @@ public class MessageReq {
     private String msg;
 
     public MessageVo toMessageVo() {
-        MessageVo messageVo = new MessageVo();
+        var messageVo = new MessageVo();
         BeanUtils.copyProperties(this, messageVo);
         return messageVo;
     }

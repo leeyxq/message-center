@@ -1,5 +1,6 @@
 package com.example.messagecenter.push.cluster.redis;
 
+import com.example.messagecenter.common.event.MessageApplicationEventPublisher;
 import com.example.messagecenter.push.cluster.redis.listener.MessagePushClusterRedisListener;
 import com.example.messagecenter.push.cluster.redis.listener.MessageSendClusterRedisListener;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +38,8 @@ public class PushServiceClusterRedisConfig {
      * 订阅redis接受消息事件-用来推流
      */
     @Bean
-    public MessagePushClusterRedisListener messagePushClusterRedisListener() {
-        return new MessagePushClusterRedisListener();
+    public MessagePushClusterRedisListener messagePushClusterRedisListener(MessageApplicationEventPublisher messageApplicationEventPublisher) {
+        return new MessagePushClusterRedisListener(messageApplicationEventPublisher);
     }
 
     @Bean
@@ -55,7 +56,7 @@ public class PushServiceClusterRedisConfig {
     RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory,
                                             MessageListenerAdapter listenerAdapter) {
 
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        var container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(listenerAdapter, new ChannelTopic(REDIS_CHANNEL_SENG_SMG));
         return container;
