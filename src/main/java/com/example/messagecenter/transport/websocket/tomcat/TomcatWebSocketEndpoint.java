@@ -1,5 +1,6 @@
 package com.example.messagecenter.transport.websocket.tomcat;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -24,13 +25,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @ServerEndpoint("/ws/{name}")
 @ConditionalOnClass(ServerEndpointExporter.class)
+@EqualsAndHashCode
 public class TomcatWebSocketEndpoint {
 
     /**
      * 用于存所有的连接服务的客户端，这个对象存储是安全的
      */
     @Getter
-    private final static ConcurrentHashMap<String, Set<TomcatWebSocketEndpoint>> webSocketSet = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Set<TomcatWebSocketEndpoint>> USER_AND_WEB_SOCKET_CACHE = new ConcurrentHashMap<>();
     /**
      * 与某个客户端的连接对话，需要通过它来给客户端发送消息
      */
@@ -42,19 +44,16 @@ public class TomcatWebSocketEndpoint {
 
     /**
      * 指定发送
-     *
-     * @param name
-     * @param message
      */
     public static void toUser(String name, String message) {
-        Set<TomcatWebSocketEndpoint> endpoints = webSocketSet.get(name);
+        Set<TomcatWebSocketEndpoint> endpoints = USER_AND_WEB_SOCKET_CACHE.get(name);
         if (endpoints == null) {
             log.warn("User {} not found, skipping sending message", name);
             return;
         }
         if (endpoints.isEmpty()) {
             log.warn("User {} not found, skipping sending message", name);
-            webSocketSet.remove(name);
+            USER_AND_WEB_SOCKET_CACHE.remove(name);
             return;
         }
         Iterator<TomcatWebSocketEndpoint> iterator = endpoints.iterator();
@@ -78,22 +77,16 @@ public class TomcatWebSocketEndpoint {
         this.session = session;
         this.name = name;
         // name是用来表示唯一客户端，如果需要指定发送，需要指定发送通过name来区分
-        Set<TomcatWebSocketEndpoint> tomcatWebSocketEndpoints = webSocketSet.get(name);
-        if (tomcatWebSocketEndpoints == null) {
-            synchronized (TomcatWebSocketEndpoint.class) {
-                if (tomcatWebSocketEndpoints == null) {
-                    tomcatWebSocketEndpoints = ConcurrentHashMap.newKeySet();
-                }
-            }
-        }
+        Set<TomcatWebSocketEndpoint> tomcatWebSocketEndpoints = USER_AND_WEB_SOCKET_CACHE.computeIfAbsent(name, k -> ConcurrentHashMap.newKeySet());
+
         tomcatWebSocketEndpoints.add(this);
-        log.info("[WebSocket] 连接成功，当前连接人数为：={}", webSocketSet.size());
+        log.info("[WebSocket] 连接成功，当前连接人数为：={}", USER_AND_WEB_SOCKET_CACHE.size());
     }
 
     @OnClose
     public void onClose() {
-        webSocketSet.remove(this.name);
-        log.info("[WebSocket] 退出成功，当前连接人数为：={}", webSocketSet.size());
+        USER_AND_WEB_SOCKET_CACHE.remove(this.name);
+        log.info("[WebSocket] 退出成功，当前连接人数为：={}", USER_AND_WEB_SOCKET_CACHE.size());
     }
 
     @OnMessage

@@ -10,5 +10,10 @@ import com.example.messagecenter.common.vo.MessageVo;
  */
 public interface ReceiveMessageService {
 
+    /**
+     * 发送消息
+     *
+     * @param messageVo 消息对象
+     */
     void sendMessage(MessageVo messageVo);
 }

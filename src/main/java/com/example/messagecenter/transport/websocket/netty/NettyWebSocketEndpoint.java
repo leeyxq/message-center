@@ -1,10 +1,11 @@
 package com.example.messagecenter.transport.websocket.netty;
 
 
-import com.example.messagecenter.common.util.StringMutexLock;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.timeout.IdleStateEvent;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.util.MultiValueMap;
@@ -23,14 +24,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2021/5/17 10:38 上午
  **/
 @Slf4j
+@ToString
+@EqualsAndHashCode
 @ConditionalOnClass(ServerEndpoint.class)
 @ServerEndpoint(path = "${ws.netty.context}", host = "${ws.netty.host}", port = "${ws.netty.port}", bossLoopGroupThreads = "${ws.netty.bossThreads}", workerLoopGroupThreads = "${ws.netty.workerThreads}")
 public class NettyWebSocketEndpoint {
     /**
-     * 用于存所有的连接服务的客户端，这个对象存储是安全的
+     * 用户和websocket连接缓存
      */
     @Getter
-    private final static ConcurrentHashMap<String, Set<NettyWebSocketEndpoint>> webSocketSet = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Set<NettyWebSocketEndpoint>> USER_AND_WEB_SOCKET_CACHE = new ConcurrentHashMap<>();
+
     private Session session;
     private String name;
 
@@ -38,14 +42,14 @@ public class NettyWebSocketEndpoint {
      * 指定用户发送
      */
     public static void toUser(String name, String message) {
-        var endpoints = webSocketSet.get(name);
+        var endpoints = USER_AND_WEB_SOCKET_CACHE.get(name);
         if (endpoints == null) {
             log.warn("User {} not found, skipping sending message", name);
             return;
         }
         if (endpoints.isEmpty()) {
             log.warn("User {} not found, skipping sending message", name);
-            webSocketSet.remove(name);
+            USER_AND_WEB_SOCKET_CACHE.remove(name);
             return;
         }
         Iterator<NettyWebSocketEndpoint> iterator = endpoints.iterator();
@@ -76,29 +80,20 @@ public class NettyWebSocketEndpoint {
         this.session = session;
         this.name = name;
         // 1.find all endpoints for the user by user name
-        Set<NettyWebSocketEndpoint> nettyWebSocketEndpoints = webSocketSet.get(name);
+        var nettyWebSocketEndpoints = USER_AND_WEB_SOCKET_CACHE.computeIfAbsent(name, k -> ConcurrentHashMap.newKeySet());
 
-        // 2.if the endpoints is empty, lock according by the user name string to create a thread safe set object
-        if (nettyWebSocketEndpoints == null) {
-            try (StringMutexLock.LockResult ignored = StringMutexLock.lock(name)) {
-                if (nettyWebSocketEndpoints == null) {
-                    nettyWebSocketEndpoints = ConcurrentHashMap.newKeySet();
-                    webSocketSet.put(name, nettyWebSocketEndpoints);
-                }
-            }
-        }
         nettyWebSocketEndpoints.add(this);
-        log.info("connection successful,number of connections：={}", webSocketSet.size());
+        log.info("connection successful,number of connections：={}", USER_AND_WEB_SOCKET_CACHE.size());
     }
 
     @OnClose
     public void onClose(Session session) {
         log.debug("one connection closed: sessionId={}, name={}", session.id(), name);
-        var webSocketEndpoints = webSocketSet.get(this.name);
+        var webSocketEndpoints = USER_AND_WEB_SOCKET_CACHE.get(this.name);
         if (webSocketEndpoints != null) {
             webSocketEndpoints.remove(this);
         }
-        log.debug("one connection closed: number of connections={}", webSocketSet.size());
+        log.debug("one connection closed: number of connections={}", USER_AND_WEB_SOCKET_CACHE.size());
     }
 
     @OnError

@@ -31,7 +31,7 @@ import static org.springframework.data.redis.listener.adapter.MessageListenerAda
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(value = RUN_MODEL_CONFIG, havingValue = RUN_MODEL_CLUSTER_REDIS, matchIfMissing = false)
+@ConditionalOnProperty(value = RUN_MODEL_CONFIG, havingValue = RUN_MODEL_CLUSTER_REDIS)
 public class PushServiceClusterRedisConfig {
     /**
      * 订阅spring event事件-推送消息
@@ -76,9 +76,7 @@ public class PushServiceClusterRedisConfig {
     public Executor redisTaskExecutor() {
         var taskExecutor = new ThreadPoolTaskExecutor();
         taskExecutor.setThreadNamePrefix("redis-subscribe");
-        taskExecutor.setRejectedExecutionHandler((r, executor) -> {
-            log.error("redis-subscribe rejectedExecution: {}", r);
-        });
+        taskExecutor.setRejectedExecutionHandler((r, executor) -> log.error("redis-subscribe rejectedExecution: {}", r));
         return taskExecutor;
     }
 

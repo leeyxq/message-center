@@ -22,21 +22,7 @@ public class StringMutexLock {
      * 字符锁管理器，将String转换为CountDownLatch
      * 即锁只会发生在真正有并发更新并且是同一个String的情况下
      */
-    private static final ConcurrentMap<String, CountDownLatch> lockKeyHolder = new ConcurrentHashMap<>();
-
-    /**
-     * 锁结果返回（使用JDK中try-with-resources机制来自动释放锁）
-     */
-    @AllArgsConstructor
-    @Getter
-    public static class LockResult implements AutoCloseable {
-        private String lockKey;
-
-        @Override
-        public void close() {
-            unlock(lockKey);
-        }
-    }
+    private static final ConcurrentMap<String, CountDownLatch> LOCK_KEY_HOLDER = new ConcurrentHashMap<>();
 
     /**
      * 基于lockKey上锁，同步
@@ -59,7 +45,7 @@ public class StringMutexLock {
     /**
      * 释放lockKey锁
      */
-    private static boolean unlock(String lockKey) {
+    public static boolean unlock(String lockKey) {
         CountDownLatch realLock = getAndReleaseLock1(lockKey);
         releaseSecondLevelLock(realLock);
         return true;
@@ -69,14 +55,14 @@ public class StringMutexLock {
      * 尝试给lockKey上锁
      */
     private static boolean tryLock(String lockKey) {
-        return lockKeyHolder.putIfAbsent(lockKey, new CountDownLatch(1)) == null;
+        return LOCK_KEY_HOLDER.putIfAbsent(lockKey, new CountDownLatch(1)) == null;
     }
 
     /**
      * 释放1级锁，并返回重量级锁
      */
     private static CountDownLatch getAndReleaseLock1(String lockKey) {
-        return lockKeyHolder.remove(lockKey);
+        return LOCK_KEY_HOLDER.remove(lockKey);
     }
 
     /**
@@ -100,6 +86,20 @@ public class StringMutexLock {
      * 通过lockKey获取对应锁实例
      */
     private static CountDownLatch getRealLockByKey(String lockKey) {
-        return lockKeyHolder.get(lockKey);
+        return LOCK_KEY_HOLDER.get(lockKey);
+    }
+
+    /**
+     * 锁结果返回（使用JDK中try-with-resources机制来自动释放锁）
+     */
+    @AllArgsConstructor
+    @Getter
+    public static class LockResult implements AutoCloseable {
+        private String lockKey;
+
+        @Override
+        public void close() {
+            StringMutexLock.unlock(lockKey);
+        }
     }
 }
