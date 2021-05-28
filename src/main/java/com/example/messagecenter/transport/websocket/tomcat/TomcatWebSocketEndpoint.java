@@ -12,6 +12,8 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -28,7 +30,7 @@ public class TomcatWebSocketEndpoint {
      * 用于存所有的连接服务的客户端，这个对象存储是安全的
      */
     @Getter
-    private static ConcurrentHashMap<String, TomcatWebSocketEndpoint> webSocketSet = new ConcurrentHashMap<>();
+    private final static ConcurrentHashMap<String, Set<TomcatWebSocketEndpoint>> webSocketSet = new ConcurrentHashMap<>();
     /**
      * 与某个客户端的连接对话，需要通过它来给客户端发送消息
      */
@@ -45,19 +47,29 @@ public class TomcatWebSocketEndpoint {
      * @param message
      */
     public static void toUser(String name, String message) {
-        var endpoint = webSocketSet.get(name);
-        if (endpoint == null) {
+        Set<TomcatWebSocketEndpoint> endpoints = webSocketSet.get(name);
+        if (endpoints == null) {
             log.warn("User {} not found, skipping sending message", name);
             return;
         }
-        try {
-            if (endpoint.session == null || !endpoint.session.isOpen()) {
-                log.warn("Session is empty or closed, skipping sending message");
-                return;
+        if (endpoints.isEmpty()) {
+            log.warn("User {} not found, skipping sending message", name);
+            webSocketSet.remove(name);
+            return;
+        }
+        Iterator<TomcatWebSocketEndpoint> iterator = endpoints.iterator();
+        while (iterator.hasNext()) {
+            var endpoint = iterator.next();
+            try {
+                if (endpoint.session == null || !endpoint.session.isOpen()) {
+                    log.warn("Session is empty or closed, skipping sending message");
+                    iterator.remove();
+                    continue;
+                }
+                endpoint.session.getBasicRemote().sendText(message);
+            } catch (Exception e) {
+                log.error("toUser err: name={}, msg={}, err={}", name, message, e.getMessage());
             }
-            endpoint.session.getBasicRemote().sendText(message);
-        } catch (Exception e) {
-            log.error("toUser err: name={}, msg={}, err={}", name, message, e.getMessage());
         }
     }
 
@@ -66,7 +78,15 @@ public class TomcatWebSocketEndpoint {
         this.session = session;
         this.name = name;
         // name是用来表示唯一客户端，如果需要指定发送，需要指定发送通过name来区分
-        webSocketSet.put(name, this);
+        Set<TomcatWebSocketEndpoint> tomcatWebSocketEndpoints = webSocketSet.get(name);
+        if (tomcatWebSocketEndpoints == null) {
+            synchronized (TomcatWebSocketEndpoint.class) {
+                if (tomcatWebSocketEndpoints == null) {
+                    tomcatWebSocketEndpoints = ConcurrentHashMap.newKeySet();
+                }
+            }
+        }
+        tomcatWebSocketEndpoints.add(this);
         log.info("[WebSocket] 连接成功，当前连接人数为：={}", webSocketSet.size());
     }
 

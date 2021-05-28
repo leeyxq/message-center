@@ -1,6 +1,7 @@
 package com.example.messagecenter.transport.websocket.netty;
 
 
+import com.example.messagecenter.common.util.StringMutexLock;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.timeout.IdleStateEvent;
 import lombok.Getter;
@@ -10,7 +11,9 @@ import org.springframework.util.MultiValueMap;
 import org.yeauty.annotation.*;
 import org.yeauty.pojo.Session;
 
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -27,36 +30,37 @@ public class NettyWebSocketEndpoint {
      * 用于存所有的连接服务的客户端，这个对象存储是安全的
      */
     @Getter
-    private static ConcurrentHashMap<String, NettyWebSocketEndpoint> webSocketSet = new ConcurrentHashMap<>();
-    /**
-     * 与某个客户端的连接对话，需要通过它来给客户端发送消息
-     */
+    private final static ConcurrentHashMap<String, Set<NettyWebSocketEndpoint>> webSocketSet = new ConcurrentHashMap<>();
     private Session session;
-    /**
-     * 标识当前连接客户端的用户名
-     */
     private String name;
 
     /**
-     * 指定发送
-     *
-     * @param name
-     * @param message
+     * 指定用户发送
      */
     public static void toUser(String name, String message) {
-        var endpoint = webSocketSet.get(name);
-        if (endpoint == null) {
+        var endpoints = webSocketSet.get(name);
+        if (endpoints == null) {
             log.warn("User {} not found, skipping sending message", name);
             return;
         }
-        try {
-            if (endpoint.session == null || !endpoint.session.isOpen()) {
-                log.warn("Session is empty or closed, skipping sending message");
-                return;
+        if (endpoints.isEmpty()) {
+            log.warn("User {} not found, skipping sending message", name);
+            webSocketSet.remove(name);
+            return;
+        }
+        Iterator<NettyWebSocketEndpoint> iterator = endpoints.iterator();
+        while (iterator.hasNext()) {
+            var endpoint = iterator.next();
+            try {
+                if (endpoint.session == null || !endpoint.session.isOpen()) {
+                    log.warn("Session is empty or closed, skipping sending message");
+                    iterator.remove();
+                    continue;
+                }
+                endpoint.session.sendText(message);
+            } catch (Exception e) {
+                log.error("toUser err: name={}, msg={}, err={}", name, message, e.getMessage());
             }
-            endpoint.session.sendText(message);
-        } catch (Exception e) {
-            log.error("toUser err: name={}, msg={}, err={}", name, message, e.getMessage());
         }
     }
 
@@ -71,16 +75,30 @@ public class NettyWebSocketEndpoint {
         log.debug("new connection: name={}", name);
         this.session = session;
         this.name = name;
-        // name是用来表示唯一客户端，如果需要指定发送，需要指定发送通过name来区分
-        webSocketSet.put(name, this);
+        // 1.find all endpoints for the user by user name
+        Set<NettyWebSocketEndpoint> nettyWebSocketEndpoints = webSocketSet.get(name);
+
+        // 2.if the endpoints is empty, lock according by the user name string to create a thread safe set object
+        if (nettyWebSocketEndpoints == null) {
+            try (StringMutexLock.LockResult ignored = StringMutexLock.lock(name)) {
+                if (nettyWebSocketEndpoints == null) {
+                    nettyWebSocketEndpoints = ConcurrentHashMap.newKeySet();
+                    webSocketSet.put(name, nettyWebSocketEndpoints);
+                }
+            }
+        }
+        nettyWebSocketEndpoints.add(this);
         log.info("connection successful,number of connections：={}", webSocketSet.size());
     }
 
     @OnClose
     public void onClose(Session session) {
         log.debug("one connection closed: sessionId={}, name={}", session.id(), name);
-        webSocketSet.remove(this.name);
-        log.info("connection lost,number of connections：={}", webSocketSet.size());
+        var webSocketEndpoints = webSocketSet.get(this.name);
+        if (webSocketEndpoints != null) {
+            webSocketEndpoints.remove(this);
+        }
+        log.debug("one connection closed: number of connections={}", webSocketSet.size());
     }
 
     @OnError
