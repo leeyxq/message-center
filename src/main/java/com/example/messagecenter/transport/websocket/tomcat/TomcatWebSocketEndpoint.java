@@ -45,23 +45,19 @@ public class TomcatWebSocketEndpoint {
      * @param message
      */
     public static void toUser(String name, String message) {
-        toSession(webSocketSet.get(name), name, message);
-    }
-
-    private static void toSession(TomcatWebSocketEndpoint tomcatWebSocketEndpoint, String name, String message) {
+        var endpoint = webSocketSet.get(name);
+        if (endpoint == null) {
+            log.warn("User {} not found, skipping sending message", name);
+            return;
+        }
         try {
-            if (tomcatWebSocketEndpoint == null) {
-                log.warn("skip send: not found senderWebSocket");
+            if (endpoint.session == null || !endpoint.session.isOpen()) {
+                log.warn("Session is empty or closed, skipping sending message");
                 return;
             }
-            if (tomcatWebSocketEndpoint.session == null || !tomcatWebSocketEndpoint.session.isOpen()) {
-                log.warn("skip send: session is null or closed");
-                webSocketSet.remove(name);
-                return;
-            }
-            tomcatWebSocketEndpoint.session.getBasicRemote().sendText(message);
+            endpoint.session.getBasicRemote().sendText(message);
         } catch (Exception e) {
-            log.error("toSession err: name={}, msg={}, err={}", name, message, e.getMessage());
+            log.error("toUser err: name={}, msg={}, err={}", name, message, e.getMessage());
         }
     }
 

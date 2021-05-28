@@ -44,25 +44,22 @@ public class NettyWebSocketEndpoint {
      * @param message
      */
     public static void toUser(String name, String message) {
-        toSession(webSocketSet.get(name), name, message);
-    }
-
-    private static void toSession(NettyWebSocketEndpoint nettyWebSocketEndpoint, String name, String message) {
+        var endpoint = webSocketSet.get(name);
+        if (endpoint == null) {
+            log.warn("User {} not found, skipping sending message", name);
+            return;
+        }
         try {
-            if (nettyWebSocketEndpoint == null) {
-                log.warn("skip send: not found senderWebSocket");
+            if (endpoint.session == null || !endpoint.session.isOpen()) {
+                log.warn("Session is empty or closed, skipping sending message");
                 return;
             }
-            if (nettyWebSocketEndpoint.session == null || !nettyWebSocketEndpoint.session.isOpen()) {
-                log.warn("skip send: session is null or closed");
-                webSocketSet.remove(name);
-                return;
-            }
-            nettyWebSocketEndpoint.session.sendText(message);
+            endpoint.session.sendText(message);
         } catch (Exception e) {
-            log.error("toSession err: name={}, msg={}, err={}", name, message, e.getMessage());
+            log.error("toUser err: name={}, msg={}, err={}", name, message, e.getMessage());
         }
     }
+
 
     @BeforeHandshake
     public void handshake(Session session, HttpHeaders headers, @RequestParam String name, @RequestParam MultiValueMap<String, Object> reqMap, @PathVariable String arg, @PathVariable Map<String, Object> pathMap) {
@@ -76,14 +73,14 @@ public class NettyWebSocketEndpoint {
         this.name = name;
         // name是用来表示唯一客户端，如果需要指定发送，需要指定发送通过name来区分
         webSocketSet.put(name, this);
-        log.info("[WebSocket] 连接成功，当前连接人数为：={}", webSocketSet.size());
+        log.info("connection successful,number of connections：={}", webSocketSet.size());
     }
 
     @OnClose
     public void onClose(Session session) {
         log.debug("one connection closed: sessionId={}, name={}", session.id(), name);
         webSocketSet.remove(this.name);
-        log.info("[WebSocket] 退出成功，当前连接人数为：={}", webSocketSet.size());
+        log.info("connection lost,number of connections：={}", webSocketSet.size());
     }
 
     @OnError
@@ -93,8 +90,8 @@ public class NettyWebSocketEndpoint {
 
     @OnMessage
     public void onMessage(Session session, String message) {
-        log.debug("onMessage: {}", message);
-        session.sendText("Hello Netty!");
+        log.debug("new message: {}", message);
+        session.sendText("server response: " + message);
     }
 
     @OnBinary

@@ -57,7 +57,7 @@ files/tmp/*
 
 # concrete5 5.7 specific
 
-# ignore everything but the index.html
+# ignore everything but the tomcat.html
 /application/files/*
 !/application/files/index.html
 

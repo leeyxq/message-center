@@ -1,4 +1,4 @@
-package com.example.messagecenter.transport;
+package com.example.messagecenter.transport.service;
 
 import com.example.messagecenter.common.vo.MessageVo;
 

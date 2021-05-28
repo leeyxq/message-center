@@ -8,7 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import static com.example.messagecenter.common.constant.CommonConst.REDIS_CHANNEL_SENG_SMG;
 
 /**
- * 单机-消息发布接受监听
+ * 单机集群-消息发布接受监听
  *
  * @author lixiangqian
  * @since 2021/5/16 13:20

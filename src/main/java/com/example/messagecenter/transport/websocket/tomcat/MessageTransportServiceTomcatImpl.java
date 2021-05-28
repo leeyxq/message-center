@@ -1,7 +1,7 @@
 package com.example.messagecenter.transport.websocket.tomcat;
 
 import com.example.messagecenter.common.vo.MessageVo;
-import com.example.messagecenter.transport.MessageTransportService;
+import com.example.messagecenter.transport.service.MessageTransportService;
 
 /**
  * @author lixiangqian

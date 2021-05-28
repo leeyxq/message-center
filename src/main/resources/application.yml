@@ -15,22 +15,21 @@ spring:
 
 application:
   #程序运行模式 single-单机 cluster-redis-集群redis模式
-  run-model: single
+  run-model: cluster-redis
 
 #websocket配置
 ws:
   hostname: 0.0.0.0
   port: 8081
-  #socketio推流协议配置
-  socketio:
-    context: /ws
-    bossThreads: 2
-    workerThreads: 10
-    hostname: ${ws.hostname}
-    port: 8081
   netty:
     context: '/netty/ws'
     bossThreads: 2
     workerThreads: 16
     host: ${ws.hostname}
     port: 8082
+
+redis-subscribe-executor:
+  corePoolSize: 10
+  maxPoolSize: 200
+  queueCapacity: 1000
+  keepAliveSeconds: 30
